@@ -1,3 +1,23 @@
-On applique les concepts vus pour améliorer notre code : 1. **Remplacer** `map[int]map[string]string` par `map[int]*Contact`. - On stocke des pointers pour pouvoir modifier les contacts facilement. 2. **Transformer** les fonctions (`ajouter`, `supprimer`...) en méthodes attachées à la struct `Contact` (quand celà a du sens) 3. **Utiliser** un constructeur `NewContact` pour valider les données à la création.
+# TP 2: Système de Notifications et Logging
 
-**Résultats** : Un code plus sûr, plus lisible et mieux organisé.
+## Objectif du Projet
+
+Construire une application en ligne de commande qui simule l'envoi de notifications via différents canaux et qui archive un historique de tous les envois réussis.
+
+## Fonctionnalités Attendues
+
+1. Un Système de Notification Flexible
+
+- Votre programme doit pouvoir gérer plusieurs types de notifications : Email, SMS, et Push.
+- Le notificateur SMS doit inclure une logique de validation. Si un numéro de téléphone est considéré comme invalide (par exemple, il ne commence pas par "06"), l'envoi doit échouer et retourner une erreur explicite.
+- Le programme principal doit pouvoir traiter une liste contenant différents types de notificateurs les uns à la suite des autres.
+- Les erreurs d'envoi doivent être capturées et affichées dans la console sans stopper le reste du programme.
+
+2. Un Système d'Archivage (Storer)
+
+- Chaque notification envoyée avec succès doit être enregistrée.
+- L'enregistrement doit contenir le message envoyé ainsi que la date et l'heure de l'envoi (timestamp).
+- Les enregistrements seront conservés en mémoire.
+- À la fin de l'exécution, le programme devra afficher la liste complète de toutes les notifications qui ont été archivées.
+
+- **Concepts Clés à Utiliser** : interfaces, structs, slices, gestion d'erreurs, le package time et tout ce qu'on a vu en cours ensemble.
