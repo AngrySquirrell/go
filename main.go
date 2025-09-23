@@ -1,20 +1,50 @@
+
 package main
 
 import (
-	"bufio"
-	"flag"
-	"fmt"
-	"os"
-	"os/exec"
-	"runtime"
-	"strconv"
-	"strings"
+ "bufio"
+ "flag"
+ "fmt"
+ "os"
+ "os/exec"
+ "runtime"
+ "strconv"
+ "strings"
 )
 
 type Contact struct {
-	ID    int
-	Nom   string
-	Email string
+ ID    int
+ Nom   string
+ Email string
+}
+
+// Constructeur pour valider les données
+func NewContact(id int, nom, email string) (*Contact, error) {
+ if nom == "" {
+  return nil, fmt.Errorf("Le nom ne peut pas être vide")
+ }
+ if email == "" {
+  return nil, fmt.Errorf("L'email ne peut pas être vide")
+ }
+ return &Contact{ID: id, Nom: nom, Email: email}, nil
+}
+
+// Méthode pour mettre à jour le contact
+func (c *Contact) Update(nom, email string) error {
+ if nom == "" {
+  return fmt.Errorf("Le nom ne peut pas être vide")
+ }
+ if email == "" {
+  return fmt.Errorf("L'email ne peut pas être vide")
+ }
+ c.Nom = nom
+ c.Email = email
+ return nil
+}
+
+// Méthode pour afficher le contact
+func (c *Contact) Print() {
+ fmt.Printf("ID: %d | Nom: %s | Email: %s\n", c.ID, c.Nom, c.Email)
 }
 
 func clearScreen() {
@@ -40,29 +70,23 @@ func main() {
 	mail := flag.String("mail", "", "Email du contact")
 	flag.Parse()
 
-	contacts := make(map[int]Contact)
-	nextID := 1
+	 contacts := make(map[int]*Contact)
+	 nextID := 1
 
 	// Si le flag --ajouter est utilisé
-	if *ajouter {
-		if *name == "" || *mail == "" {
-			fmt.Println("Erreur : Les flags --name et --mail sont obligatoires avec --ajouter")
-			fmt.Println("Exemple : go run main.go --ajouter --name=Jean --mail=Jean@exemple.com")
-			return
-		}
-		
-		contact := Contact{
-			ID:    nextID,
-			Nom:   *name,
-			Email: *mail,
-		}
-		
-		contacts[nextID] = contact
-		fmt.Printf("Contact ajouté avec succès !\n")
-		fmt.Printf("ID: %d | Nom: %s | Email: %s\n", nextID, *name, *mail)
-		nextID++
-		fmt.Println("\nPassage en mode interactif...")
-		pauseBeforeContinue()
+	 if *ajouter {
+	 contact, err := NewContact(nextID, *name, *mail)
+	 if err != nil {
+	 fmt.Println("Erreur :", err)
+	 fmt.Println("Exemple : go run main.go --ajouter --name=Jean --mail=Jean@exemple.com")
+	 return
+	 }
+	 contacts[nextID] = contact
+	 fmt.Printf("Contact ajouté avec succès !\n")
+	 contact.Print()
+	 nextID++
+	 fmt.Println("\nPassage en mode interactif...")
+	 pauseBeforeContinue()
 	}
 
 	// Mode interactif normal
@@ -109,91 +133,78 @@ func main() {
 	}
 }
 
-func ajouterContact(contacts map[int]Contact, nextID *int) {
-	reader := bufio.NewReader(os.Stdin)
-	
-	fmt.Print("Nom : ")
-	nom, _ := reader.ReadString('\n')
-	nom = strings.TrimSpace(nom)
-	
-	fmt.Print("Email : ")
-	email, _ := reader.ReadString('\n')
-	email = strings.TrimSpace(email)
-	
-	contact := Contact{
-		ID:    *nextID,
-		Nom:   nom,
-		Email: email,
-	}
-	
-	contacts[*nextID] = contact
-	fmt.Printf("Contact ajouté avec l'ID %d\n", *nextID)
-	*nextID++
+func ajouterContact(contacts map[int]*Contact, nextID *int) {
+ reader := bufio.NewReader(os.Stdin)
+ fmt.Print("Nom : ")
+ nom, _ := reader.ReadString('\n')
+ nom = strings.TrimSpace(nom)
+ fmt.Print("Email : ")
+ email, _ := reader.ReadString('\n')
+ email = strings.TrimSpace(email)
+ contact, err := NewContact(*nextID, nom, email)
+ if err != nil {
+ fmt.Println("Erreur :", err)
+ return
+ }
+ contacts[*nextID] = contact
+ fmt.Printf("Contact ajouté avec l'ID %d\n", *nextID)
+ *nextID++
 }
 
-func listerContacts(contacts map[int]Contact) {
-	if len(contacts) == 0 {
-		fmt.Println("Aucun contact trouvé")
-		return
-	}
-	
-	fmt.Println("\n=== Liste des contacts ===")
-	for id, contact := range contacts {
-		fmt.Printf("ID: %d | Nom: %s | Email: %s\n", id, contact.Nom, contact.Email)
-	}
+func listerContacts(contacts map[int]*Contact) {
+ if len(contacts) == 0 {
+ fmt.Println("Aucun contact trouvé")
+ return
+ }
+ fmt.Println("\n=== Liste des contacts ===")
+ for _, contact := range contacts {
+ contact.Print()
+ }
 }
 
-func supprimerContact(contacts map[int]Contact) {
-	var idStr string
-	fmt.Print("ID du contact à supprimer : ")
-	fmt.Scanln(&idStr)
-	
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		fmt.Println("Erreur : ID invalide")
-		return
-	}
-	
-	_, existe := contacts[id]
-	if !existe {
-		fmt.Println("Contact non trouvé")
-		return
-	}
-	
-	delete(contacts, id)
-	fmt.Printf("Contact avec l'ID %d supprimé\n", id)
+func supprimerContact(contacts map[int]*Contact) {
+ var idStr string
+ fmt.Print("ID du contact à supprimer : ")
+ fmt.Scanln(&idStr)
+ id, err := strconv.Atoi(idStr)
+ if err != nil {
+ fmt.Println("Erreur : ID invalide")
+ return
+ }
+ _, existe := contacts[id]
+ if !existe {
+ fmt.Println("Contact non trouvé")
+ return
+ }
+ delete(contacts, id)
+ fmt.Printf("Contact avec l'ID %d supprimé\n", id)
 }
 
-func mettreAJourContact(contacts map[int]Contact) {
-	var idStr string
-	fmt.Print("ID du contact à mettre à jour : ")
-	fmt.Scanln(&idStr)
-	
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		fmt.Println("Erreur : ID invalide")
-		return
-	}
-	
-	contact, existe := contacts[id]
-	if !existe {
-		fmt.Println("Contact non trouvé")
-		return
-	}
-	
-	reader := bufio.NewReader(os.Stdin)
-	
-	fmt.Printf("Nom actuel: %s - Nouveau nom : ", contact.Nom)
-	nom, _ := reader.ReadString('\n')
-	nom = strings.TrimSpace(nom)
-	
-	fmt.Printf("Email actuel: %s - Nouvel email : ", contact.Email)
-	email, _ := reader.ReadString('\n')
-	email = strings.TrimSpace(email)
-	
-	contact.Nom = nom
-	contact.Email = email
-	contacts[id] = contact
-	
-	fmt.Printf("Contact avec l'ID %d mis à jour\n", id)
+func mettreAJourContact(contacts map[int]*Contact) {
+ var idStr string
+ fmt.Print("ID du contact à mettre à jour : ")
+ fmt.Scanln(&idStr)
+ id, err := strconv.Atoi(idStr)
+ if err != nil {
+ fmt.Println("Erreur : ID invalide")
+ return
+ }
+ contact, existe := contacts[id]
+ if !existe {
+ fmt.Println("Contact non trouvé")
+ return
+ }
+ reader := bufio.NewReader(os.Stdin)
+ fmt.Printf("Nom actuel: %s - Nouveau nom : ", contact.Nom)
+ nom, _ := reader.ReadString('\n')
+ nom = strings.TrimSpace(nom)
+ fmt.Printf("Email actuel: %s - Nouvel email : ", contact.Email)
+ email, _ := reader.ReadString('\n')
+ email = strings.TrimSpace(email)
+ err = contact.Update(nom, email)
+ if err != nil {
+ fmt.Println("Erreur :", err)
+ return
+ }
+ fmt.Printf("Contact avec l'ID %d mis à jour\n", id)
 }
