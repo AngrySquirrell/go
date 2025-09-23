@@ -1,210 +1,102 @@
-
 package main
 
 import (
- "bufio"
- "flag"
- "fmt"
- "os"
- "os/exec"
- "runtime"
- "strconv"
- "strings"
+    "fmt"
+    "time"
+    "strings"
 )
 
-type Contact struct {
- ID    int
- Nom   string
- Email string
+// Codes ANSI pour les couleurs
+const (
+    ColorReset  = "\033[0m"
+    ColorBlue   = "\033[34m" // Email
+    ColorGreen  = "\033[32m" // SMS
+    ColorCyan   = "\033[36m" // Push
+    ColorRed    = "\033[31m" // Erreur
+)
+
+// Interface pour les notificateurs
+type Notificator interface {
+    Send(message string) error
 }
 
-// Constructeur pour valider les données
-func NewContact(id int, nom, email string) (*Contact, error) {
- if nom == "" {
-  return nil, fmt.Errorf("Le nom ne peut pas être vide")
- }
- if email == "" {
-  return nil, fmt.Errorf("L'email ne peut pas être vide")
- }
- return &Contact{ID: id, Nom: nom, Email: email}, nil
+// Email
+type EmailNotificator struct {
+    Address string
 }
 
-// Méthode pour mettre à jour le contact
-func (c *Contact) Update(nom, email string) error {
- if nom == "" {
-  return fmt.Errorf("Le nom ne peut pas être vide")
- }
- if email == "" {
-  return fmt.Errorf("L'email ne peut pas être vide")
- }
- c.Nom = nom
- c.Email = email
- return nil
+func (e EmailNotificator) Send(message string) error {
+    // Simule l'envoi d'un email
+    fmt.Printf("%sEmail envoyé à %s: %s%s\n", ColorBlue, e.Address, message, ColorReset)
+    return nil
 }
 
-// Méthode pour afficher le contact
-func (c *Contact) Print() {
- fmt.Printf("ID: %d | Nom: %s | Email: %s\n", c.ID, c.Nom, c.Email)
+// SMS
+type SMSNotificator struct {
+    Phone string
 }
 
-func clearScreen() {
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", "cls")
-	} else {
-		cmd = exec.Command("clear")
-	}
-	cmd.Stdout = os.Stdout
-	cmd.Run()
+func (s SMSNotificator) Send(message string) error {
+    if !strings.HasPrefix(s.Phone, "06") {
+        return fmt.Errorf("%sNuméro invalide: %s%s", ColorRed, s.Phone, ColorReset)
+    }
+    fmt.Printf("%sSMS envoyé à %s: %s%s\n", ColorGreen, s.Phone, message, ColorReset)
+    return nil
 }
 
-func pauseBeforeContinue() {
-	fmt.Print("\nAppuyez sur Entrée pour continuer...")
-	fmt.Scanln()
+// Push
+type PushNotificator struct {
+    DeviceID string
+}
+
+func (p PushNotificator) Send(message string) error {
+    fmt.Printf("%sPush envoyé à %s: %s%s\n", ColorCyan, p.DeviceID, message, ColorReset)
+    return nil
+}
+
+// Struct pour l'archivage
+type NotificationLog struct {
+    Message   string
+    Timestamp time.Time
+}
+
+type Storer struct {
+    Logs []NotificationLog
+}
+
+func (s *Storer) Archive(message string) {
+    s.Logs = append(s.Logs, NotificationLog{
+        Message:   message,
+        Timestamp: time.Now(),
+    })
+}
+
+func (s Storer) PrintHistory() {
+    fmt.Println("\nHistorique des notifications archivées :")
+    for _, log := range s.Logs {
+        fmt.Printf("[%s] %s\n", log.Timestamp.Format("2006-01-02 15:04:05"), log.Message)
+    }
 }
 
 func main() {
-	// Définition des flags
-	ajouter := flag.Bool("ajouter", false, "Ajouter un contact via les flags")
-	name := flag.String("name", "", "Nom du contact")
-	mail := flag.String("mail", "", "Email du contact")
-	flag.Parse()
+    notificators := []Notificator{
+        EmailNotificator{Address: "user@example.com"},
+        SMSNotificator{Phone: "0612345678"},
+        SMSNotificator{Phone: "0123456789"}, // Erreur attendue
+        PushNotificator{DeviceID: "device123"},
+    }
 
-	 contacts := make(map[int]*Contact)
-	 nextID := 1
+    storer := &Storer{}
 
-	// Si le flag --ajouter est utilisé
-	 if *ajouter {
-	 contact, err := NewContact(nextID, *name, *mail)
-	 if err != nil {
-	 fmt.Println("Erreur :", err)
-	 fmt.Println("Exemple : go run main.go --ajouter --name=Jean --mail=Jean@exemple.com")
-	 return
-	 }
-	 contacts[nextID] = contact
-	 fmt.Printf("Contact ajouté avec succès !\n")
-	 contact.Print()
-	 nextID++
-	 fmt.Println("\nPassage en mode interactif...")
-	 pauseBeforeContinue()
-	}
+    for _, n := range notificators {
+        message := "Hello, notification !"
+        err := n.Send(message)
+        if err != nil {
+            fmt.Printf("%sErreur d'envoi : %v%s\n", ColorRed, err, ColorReset)
+        } else {
+            storer.Archive(message)
+        }
+    }
 
-	// Mode interactif normal
-	for {
-		clearScreen()
-		fmt.Println("\n=== Mini-CRM ===")
-		fmt.Println("1. Ajouter un contact")
-		fmt.Println("2. Lister tous les contacts")
-		fmt.Println("3. Supprimer un contact")
-		fmt.Println("4. Mettre à jour un contact")
-		fmt.Println("5. Quitter")
-		fmt.Print("Choisissez une option : ")
-
-		var choix string
-		fmt.Scanln(&choix)
-
-		choixInt, err := strconv.Atoi(choix)
-		if err != nil {
-			fmt.Println("Erreur : veuillez entrer un nombre valide")
-			pauseBeforeContinue()
-			continue
-		}
-
-		switch choixInt {
-		case 1:
-			ajouterContact(contacts, &nextID)
-			pauseBeforeContinue()
-		case 2:
-			listerContacts(contacts)
-			pauseBeforeContinue()
-		case 3:
-			supprimerContact(contacts)
-			pauseBeforeContinue()
-		case 4:
-			mettreAJourContact(contacts)
-			pauseBeforeContinue()
-		case 5:
-			fmt.Println("Au revoir !")
-			return
-		default:
-			fmt.Println("Option invalide")
-			pauseBeforeContinue()
-		}
-	}
-}
-
-func ajouterContact(contacts map[int]*Contact, nextID *int) {
- reader := bufio.NewReader(os.Stdin)
- fmt.Print("Nom : ")
- nom, _ := reader.ReadString('\n')
- nom = strings.TrimSpace(nom)
- fmt.Print("Email : ")
- email, _ := reader.ReadString('\n')
- email = strings.TrimSpace(email)
- contact, err := NewContact(*nextID, nom, email)
- if err != nil {
- fmt.Println("Erreur :", err)
- return
- }
- contacts[*nextID] = contact
- fmt.Printf("Contact ajouté avec l'ID %d\n", *nextID)
- *nextID++
-}
-
-func listerContacts(contacts map[int]*Contact) {
- if len(contacts) == 0 {
- fmt.Println("Aucun contact trouvé")
- return
- }
- fmt.Println("\n=== Liste des contacts ===")
- for _, contact := range contacts {
- contact.Print()
- }
-}
-
-func supprimerContact(contacts map[int]*Contact) {
- var idStr string
- fmt.Print("ID du contact à supprimer : ")
- fmt.Scanln(&idStr)
- id, err := strconv.Atoi(idStr)
- if err != nil {
- fmt.Println("Erreur : ID invalide")
- return
- }
- _, existe := contacts[id]
- if !existe {
- fmt.Println("Contact non trouvé")
- return
- }
- delete(contacts, id)
- fmt.Printf("Contact avec l'ID %d supprimé\n", id)
-}
-
-func mettreAJourContact(contacts map[int]*Contact) {
- var idStr string
- fmt.Print("ID du contact à mettre à jour : ")
- fmt.Scanln(&idStr)
- id, err := strconv.Atoi(idStr)
- if err != nil {
- fmt.Println("Erreur : ID invalide")
- return
- }
- contact, existe := contacts[id]
- if !existe {
- fmt.Println("Contact non trouvé")
- return
- }
- reader := bufio.NewReader(os.Stdin)
- fmt.Printf("Nom actuel: %s - Nouveau nom : ", contact.Nom)
- nom, _ := reader.ReadString('\n')
- nom = strings.TrimSpace(nom)
- fmt.Printf("Email actuel: %s - Nouvel email : ", contact.Email)
- email, _ := reader.ReadString('\n')
- email = strings.TrimSpace(email)
- err = contact.Update(nom, email)
- if err != nil {
- fmt.Println("Erreur :", err)
- return
- }
- fmt.Printf("Contact avec l'ID %d mis à jour\n", id)
+    storer.PrintHistory()
 }
