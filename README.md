@@ -31,7 +31,7 @@ go run main.go --ajouter --name="Jean Dupont" --mail="jean@exemple.com"
 - ✅ Mettre à jour un contact
 - ✅ Interface console nettoyée automatiquement
 
-## Repo
+## 🤖 Repo
 
 Chaques étapes de developpement du CLI ont été étagé via les branches.
 La main contient uniquement les énoncés et le readme.
