@@ -1,43 +1,16 @@
-Mini-CRM CLI
+# Système de Notifications et Logging (Go)
 
-> Un système de gestion de contacts minimaliste en ligne de commande développé en Go
+Ce projet est une application en ligne de commande écrite en Go qui simule l'envoi de notifications via Email, SMS et Push, avec archivage des envois réussis.
 
-## 🎯 Principe
+## Fonctionnalités
 
-Application CLI simple et efficace pour gérer vos contacts. Deux modes d'utilisation :
+- **Notifications colorées** : chaque type de notification s'affiche dans une couleur différente (Email : bleu, SMS : vert, Push : cyan, Erreur : rouge).
+- **Validation SMS** : les numéros non valides sont signalés en rouge et ne sont pas archivés.
+- **Archivage** : chaque notification envoyée avec succès est enregistrée avec son message et un timestamp.
+- **Historique** : affichage de l'historique des notifications archivées à la fin du programme.
 
-- **Interactif** : Menu principal avec navigation
-- **Direct** : Ajout rapide via flags de ligne de commande
+## Utilisation
 
-## 🚀 Utilisation
-
-### Mode Interactif
-
-```bash
-go run main.go
-```
-
-### Mode Direct (Flags)
-
-```bash
-go run main.go --ajouter --name="Jean Dupont" --mail="jean@exemple.com"
-```
-
-## ⚡ Fonctionnalités
-
-- ✅🔐 Ajouter un contact
-- ✅ Lister tous les contacts
-- ✅ Supprimer un contact par ID
-- ✅🔐 Mettre à jour un contact
-- ✅ Interface console nettoyée automatiquement
-- ✅ Structure Contact améliorée (pointeurs, méthodes)
-- ✅ Code plus sûr et lisible grâce à l'utilisation de méthodes et d'un constructeur
-
-> 🔐 Données validées
-
-## 📄 Fichier
-
-- `main.go` : code source principal
-- `README.md` : ce fichier
-- `td1.md` : consignes initiales
-- `td2.md` : consignes d'amélioration
+1. Lancez le programme avec `go run main.go`.
+2. Les notifications sont simulées et affichées dans le terminal avec leur couleur.
+3. À la fin, l'historique des notifications archivées s'affiche avec la date et l'heure d'envoi.
