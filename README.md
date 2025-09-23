@@ -25,17 +25,15 @@ go run main.go --ajouter --name="Jean Dupont" --mail="jean@exemple.com"
 
 ## ⚡ Fonctionnalités
 
-- ✅ Ajouter un contact (validation des données à la création)
+- ✅🔐 Ajouter un contact
 - ✅ Lister tous les contacts
 - ✅ Supprimer un contact par ID
-- ✅ Mettre à jour un contact (validation des données)
+- ✅🔐 Mettre à jour un contact
 - ✅ Interface console nettoyée automatiquement
 - ✅ Structure Contact améliorée (pointeurs, méthodes)
 - ✅ Code plus sûr et lisible grâce à l'utilisation de méthodes et d'un constructeur
 
-## 🛠️ Concepts Go utilisés
-
-- `for`, `switch`, `map[int]*Contact`, méthodes, constructeur, gestion d'erreur, `strconv`, `os.Stdin`, `bufio`, etc.
+> 🔐 Données validées
 
 ## 📄 Fichier
 
