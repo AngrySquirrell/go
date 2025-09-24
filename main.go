@@ -1,210 +1,234 @@
-
 package main
 
 import (
- "bufio"
- "flag"
- "fmt"
- "os"
- "os/exec"
- "runtime"
- "strconv"
- "strings"
+	"bufio"
+	"errors"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
 )
 
+// Contact est notre structure de données centrale
 type Contact struct {
- ID    int
- Nom   string
- Email string
+	ID    int
+	Name  string
+	Email string
 }
 
-// Constructeur pour valider les données
-func NewContact(id int, nom, email string) (*Contact, error) {
- if nom == "" {
-  return nil, fmt.Errorf("Le nom ne peut pas être vide")
- }
- if email == "" {
-  return nil, fmt.Errorf("L'email ne peut pas être vide")
- }
- return &Contact{ID: id, Nom: nom, Email: email}, nil
+// Storer est un CONTRAT de stockage
+// Il définit un ensemble de comportements (méthodes) que tout type
+// de stockage doit respecter. On ne se soucie par du comment c'est fait
+// (en mémoire, fichier, BDD...) seulement de ce qui peut être fait
+type Storer interface {
+	Add(contact *Contact) error
+	GetAll() ([]*Contact, error)
+	GetByID(id int) (*Contact, error)
+	Update(id int, newName, newEmail string) error
+	Delete(id int) error
 }
 
-// Méthode pour mettre à jour le contact
-func (c *Contact) Update(nom, email string) error {
- if nom == "" {
-  return fmt.Errorf("Le nom ne peut pas être vide")
- }
- if email == "" {
-  return fmt.Errorf("L'email ne peut pas être vide")
- }
- c.Nom = nom
- c.Email = email
- return nil
+type MemoryStore struct {
+	contacts map[int]*Contact
+	nextID   int
 }
 
-// Méthode pour afficher le contact
-func (c *Contact) Print() {
- fmt.Printf("ID: %d | Nom: %s | Email: %s\n", c.ID, c.Nom, c.Email)
-}
-
-func clearScreen() {
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", "cls")
-	} else {
-		cmd = exec.Command("clear")
+// NewMemoryStore est un constructeur qui initialise proprement notre storer
+func NewMemoryStore() *MemoryStore {
+	return &MemoryStore{
+		contacts: make(map[int]*Contact),
+		nextID:   1,
 	}
-	cmd.Stdout = os.Stdout
-	cmd.Run()
 }
 
-func pauseBeforeContinue() {
-	fmt.Print("\nAppuyez sur Entrée pour continuer...")
-	fmt.Scanln()
+func (ms *MemoryStore) Add(contact *Contact) error {
+	contact.ID = ms.nextID
+	ms.contacts[contact.ID] = contact
+	ms.nextID++
+	return nil
+}
+
+func (ms *MemoryStore) GetAll() ([]*Contact, error) {
+	var allContacts []*Contact
+	for _, c := range ms.contacts {
+		allContacts = append(allContacts, c)
+	}
+	return allContacts, nil
+}
+
+func (ms *MemoryStore) GetByID(id int) (*Contact, error) {
+	contact, ok := ms.contacts[id]
+	if !ok {
+		return nil, errors.New("Contact not found")
+	}
+	return contact, nil
+}
+
+func (ms *MemoryStore) Update(id int, newName, newEmail string) error {
+	contact, err := ms.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if newName != "" {
+		contact.Name = newName
+	}
+	if newEmail != "" {
+		contact.Email = newEmail
+	}
+	return nil
+}
+
+func (ms *MemoryStore) Delete(id int) error {
+	if _, ok := ms.contacts[id]; !ok {
+		return errors.New("Contact not found")
+	}
+	delete(ms.contacts, id)
+	return nil
 }
 
 func main() {
-	// Définition des flags
-	ajouter := flag.Bool("ajouter", false, "Ajouter un contact via les flags")
-	name := flag.String("name", "", "Nom du contact")
-	mail := flag.String("mail", "", "Email du contact")
-	flag.Parse()
 
-	 contacts := make(map[int]*Contact)
-	 nextID := 1
+	var store Storer = NewMemoryStore()
+	reader := bufio.NewReader(os.Stdin)
 
-	// Si le flag --ajouter est utilisé
-	 if *ajouter {
-	 contact, err := NewContact(nextID, *name, *mail)
-	 if err != nil {
-	 fmt.Println("Erreur :", err)
-	 fmt.Println("Exemple : go run main.go --ajouter --name=Jean --mail=Jean@exemple.com")
-	 return
-	 }
-	 contacts[nextID] = contact
-	 fmt.Printf("Contact ajouté avec succès !\n")
-	 contact.Print()
-	 nextID++
-	 fmt.Println("\nPassage en mode interactif...")
-	 pauseBeforeContinue()
-	}
+	fmt.Println("Welcome to the Mini CRM v3!")
 
-	// Mode interactif normal
 	for {
-		clearScreen()
-		fmt.Println("\n=== Mini-CRM ===")
-		fmt.Println("1. Ajouter un contact")
-		fmt.Println("2. Lister tous les contacts")
-		fmt.Println("3. Supprimer un contact")
-		fmt.Println("4. Mettre à jour un contact")
-		fmt.Println("5. Quitter")
-		fmt.Print("Choisissez une option : ")
+		fmt.Println("\n--- Main Menu ---")
+		fmt.Println("1. Add a contact")
+		fmt.Println("2. List contacts")
+		fmt.Println("3. Update a contact")
+		fmt.Println("4. Delete a contact")
+		fmt.Println("5. Exit")
+		fmt.Print("Your choice: ")
 
-		var choix string
-		fmt.Scanln(&choix)
+		choice := readUserChoice(reader)
 
-		choixInt, err := strconv.Atoi(choix)
-		if err != nil {
-			fmt.Println("Erreur : veuillez entrer un nombre valide")
-			pauseBeforeContinue()
-			continue
-		}
-
-		switch choixInt {
+		switch choice {
 		case 1:
-			ajouterContact(contacts, &nextID)
-			pauseBeforeContinue()
+			handleAddContact(reader, store)
 		case 2:
-			listerContacts(contacts)
-			pauseBeforeContinue()
+			handleListContacts(store)
 		case 3:
-			supprimerContact(contacts)
-			pauseBeforeContinue()
+			handleUpdateContact(reader, store)
 		case 4:
-			mettreAJourContact(contacts)
-			pauseBeforeContinue()
+			handleDeleteContact(reader, store)
 		case 5:
-			fmt.Println("Au revoir !")
+			fmt.Println("Goodbye!")
 			return
 		default:
-			fmt.Println("Option invalide")
-			pauseBeforeContinue()
+			fmt.Println("Invalid option, please try again")
+
 		}
 	}
 }
 
-func ajouterContact(contacts map[int]*Contact, nextID *int) {
- reader := bufio.NewReader(os.Stdin)
- fmt.Print("Nom : ")
- nom, _ := reader.ReadString('\n')
- nom = strings.TrimSpace(nom)
- fmt.Print("Email : ")
- email, _ := reader.ReadString('\n')
- email = strings.TrimSpace(email)
- contact, err := NewContact(*nextID, nom, email)
- if err != nil {
- fmt.Println("Erreur :", err)
- return
- }
- contacts[*nextID] = contact
- fmt.Printf("Contact ajouté avec l'ID %d\n", *nextID)
- *nextID++
+// Les fonctions "handle..." s'occupent de l'interaction avec l'utilisateur
+// et elles appellent la couche de stockage (store) pour effectuer les opérations.
+// Elles sont découplées du stockage : elles fonctionnent avec n'importe quel storer
+
+func handleAddContact(reader *bufio.Reader, storer Storer) {
+	fmt.Print("Enter contact name: ")
+	name := readLine(reader)
+
+	fmt.Print("Enter contact email: ")
+	email := readLine(reader)
+
+	contact := &Contact{
+		Name:  name,
+		Email: email,
+	}
+	err := storer.Add(contact)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("Contact '%s' added with ID %d.\n", contact.Name, contact.ID)
 }
 
-func listerContacts(contacts map[int]*Contact) {
- if len(contacts) == 0 {
- fmt.Println("Aucun contact trouvé")
- return
- }
- fmt.Println("\n=== Liste des contacts ===")
- for _, contact := range contacts {
- contact.Print()
- }
+func handleListContacts(store Storer) {
+	contacts, err := store.GetAll()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	if len(contacts) == 0 {
+		fmt.Println(" No contacts to display.")
+		return
+	}
+
+	fmt.Println("\n--- Contact List ---")
+	for _, contact := range contacts {
+		fmt.Printf("ID: %d, Name: %s, Email: %s\n", contact.ID, contact.Name, contact.Email)
+	}
 }
 
-func supprimerContact(contacts map[int]*Contact) {
- var idStr string
- fmt.Print("ID du contact à supprimer : ")
- fmt.Scanln(&idStr)
- id, err := strconv.Atoi(idStr)
- if err != nil {
- fmt.Println("Erreur : ID invalide")
- return
- }
- _, existe := contacts[id]
- if !existe {
- fmt.Println("Contact non trouvé")
- return
- }
- delete(contacts, id)
- fmt.Printf("Contact avec l'ID %d supprimé\n", id)
+func handleUpdateContact(reader *bufio.Reader, store Storer) {
+	fmt.Print("Enter the ID of the contact to update: ")
+	id := readInteger(reader)
+	if id == -1 {
+		return
+	}
+
+	// On vérifie que le contact existe avant de demander les nouvelles infos
+	existingContact, err := store.GetByID(id)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Updating '%s'. Leave blank to keep current value.\n", existingContact.Name)
+
+	fmt.Printf("New name (%s): ", existingContact.Name)
+	newName := readLine(reader)
+
+	fmt.Printf("New email (%s): ", existingContact.Email)
+	newEmail := readLine(reader)
+
+	err = store.Update(id, newName, newEmail)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	fmt.Println("Contact updated successfully.")
 }
 
-func mettreAJourContact(contacts map[int]*Contact) {
- var idStr string
- fmt.Print("ID du contact à mettre à jour : ")
- fmt.Scanln(&idStr)
- id, err := strconv.Atoi(idStr)
- if err != nil {
- fmt.Println("Erreur : ID invalide")
- return
- }
- contact, existe := contacts[id]
- if !existe {
- fmt.Println("Contact non trouvé")
- return
- }
- reader := bufio.NewReader(os.Stdin)
- fmt.Printf("Nom actuel: %s - Nouveau nom : ", contact.Nom)
- nom, _ := reader.ReadString('\n')
- nom = strings.TrimSpace(nom)
- fmt.Printf("Email actuel: %s - Nouvel email : ", contact.Email)
- email, _ := reader.ReadString('\n')
- email = strings.TrimSpace(email)
- err = contact.Update(nom, email)
- if err != nil {
- fmt.Println("Erreur :", err)
- return
- }
- fmt.Printf("Contact avec l'ID %d mis à jour\n", id)
+func handleDeleteContact(reader *bufio.Reader, store Storer) {
+	fmt.Print("Enter the ID of the contact to delete: ")
+	id := readInteger(reader)
+	if id == -1 {
+		return
+	}
+
+	err := store.Delete(id)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Contact with ID %d has been deleted.\n", id)
+} // Fonctions utilitaires pour la saisie utilisateur
+
+func readLine(reader *bufio.Reader) string {
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
+}
+
+func readUserChoice(reader *bufio.Reader) int {
+	choice, err := strconv.Atoi(readLine(reader))
+	if err != nil {
+		return -1 // Renvoie -1 pour un choix invalide
+	}
+	return choice
+}
+
+func readInteger(reader *bufio.Reader) int {
+	id, err := strconv.Atoi(readLine(reader))
+	if err != nil {
+		fmt.Println("Error: Invalid ID. Please enter a number.")
+		return -1
+	}
+	return id
 }
