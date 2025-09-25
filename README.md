@@ -119,10 +119,9 @@ L’évaluation portera sur :
 - Un lien github
 
 ### 🎁 BONUS
-
 Vous avez l'âme d'un.e développeur.euse courageux.euse ? Je vous laisse ici quelques bonus si vous voulez vous amuser un peu et avoir un programme plus complet.
 
-**1. Gestion des dossiers d'exportation **
+**1. Gestion des dossiers d'exportation**
 
 - Si le chemin de sortie JSON (`--output`) inclut des répertoires qui n'existent pas (ex: `rapports/2024/mon_rapport.json`), faire en sorte que le programme crée automatiquement ces répertoires avant d'écrire le fichier.
 - **Indice** : `os.MkdirAll(filepath.Dir(path), 0755)`
@@ -136,12 +135,12 @@ Vous avez l'âme d'un.e développeur.euse courageux.euse ? Je vous laisse ici qu
   - **Indice** : Utiliser le package `time` de Go (`time.Now()`, `time.Format()`).
   - **Intérêt** : Ajoute une fonctionnalité pratique pour l'organisation des rapports, et force à manipuler les dates en Go.
 
-**2. Commande `add-log`**
+**3. Commande `add-log`**
 
 - **Ajouter une nouvelle sous-commande add-log** qui permettrait d'ajouter manuellement une configuration de log au fichier config.json existant.
 - **Drapeaux nécessaires** : `--id`, `--path`, `--type`, `--file` (chemin du fichier `config.json`).
 
-**3. Filtrage des résultats d'analyse**
+**4. Filtrage des résultats d'analyse**
 
 - **Ajouter un drapeau `--status <status>`** (ex: `--status FAILED` ou `--status OK`) à la commande analyze pour n'afficher et/ou n'exporter que les logs ayant un certain statut.
 - **Intérêt** : Ajoute une fonctionnalité utile et demande de la logique de filtrage avant l'affichage/l'export.
